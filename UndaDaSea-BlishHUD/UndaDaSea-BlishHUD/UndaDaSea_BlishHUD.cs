@@ -62,8 +62,22 @@ namespace Taimi.UndaDaSea_BlishHUD
             _outputDevice.Volume = 0;
             _outputDevice.Play();
 
+            //Catch when the games is closed and started to bring on the music
+            GameService.GameIntegration.Gw2Closed += GameIntegration_Gw2Closed;
+            GameService.GameIntegration.Gw2Started += GameIntegration_Gw2Started;
+
             // Base handler must be called
             base.OnModuleLoaded(e);
+        }
+
+        private void GameIntegration_Gw2Started(object sender, EventArgs e)
+        {
+            _outputDevice.Play();
+        }
+
+        private void GameIntegration_Gw2Closed(object sender, EventArgs e)
+        {
+            _outputDevice.Stop();
         }
 
         protected override void Update(GameTime gameTime)
@@ -73,12 +87,19 @@ namespace Taimi.UndaDaSea_BlishHUD
             float Zloc = GameService.Gw2Mumble.PlayerCharacter.Position.Z;
             float volume;
 
-            if (Zloc <= 0)
+            if (GameService.GameIntegration.IsInGame == false)
             {
+                //If UITick is not moving might be loading or some other "state"
+                volume = 0;
+            }
+            else if (Zloc <= 0)
+            {
+                //Dey unda the sea, LET THE BLOWFISH BLOW 
                 volume = Map(Zloc, -30, 0, _masterVolume.Value, 0.01f);
             }
             else
             {
+                //Getting "near" the sea, give 'em a sample of undersea life
                 volume = Map(Zloc, 0, 3, 0.01f, 0f);
             }
 
