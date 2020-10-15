@@ -6,7 +6,9 @@ using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Microsoft.Xna.Framework;
-using NAudio.Wave;
+using CSCore;
+using CSCore.SoundOut;
+using CSCore.Codecs.MP3;
 
 namespace Taimi.UndaDaSea_BlishHUD
 {
@@ -18,12 +20,13 @@ namespace Taimi.UndaDaSea_BlishHUD
         private static readonly Logger Logger = Logger.GetLogger<Module>();
 
         //Audio Player stuff
-        private StreamMediaFoundationReader _audioFile;
-        private WaveOutEvent _outputDevice;
-        private LoopStream _loop;
+        private IWaveSource _audioFile;
+        private WasapiOut _outputDevice;
 
         //Settings (maybe one day)
         private SettingEntry<float> _masterVolume;
+
+        internal static Module ModuleInstance;
 
         #region Service Managers
         internal SettingsManager SettingsManager => this.ModuleParameters.SettingsManager;
@@ -37,7 +40,7 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            _masterVolume = settings.DefineSetting("MasterVolume.", 1.0f, "Master Volume", "Is Sebastian a little to loud for you? Well you can attempt to have him sing a little less enthusiastically.");
+            _masterVolume = settings.DefineSetting("MasterVolume.", 50.0f, "Master Volume", "Is Sebastian a little to loud for you? Well you can attempt to have him sing a little less enthusiastically.");
         }
 
         protected override void Initialize()
@@ -48,15 +51,14 @@ namespace Taimi.UndaDaSea_BlishHUD
         protected override async Task LoadAsync()
         {
             //Load Loop
-            _audioFile = new StreamMediaFoundationReader(ContentsManager.GetFileStream("uts_loop4.mp3"));
+            _audioFile = new Mp3MediafoundationDecoder(ContentsManager.GetFileStream("uts_loop4.mp3")).Loop();
         }
 
         protected override void OnModuleLoaded(EventArgs e)
         {
             //Start playing the music at 0 volume
-            _loop = new LoopStream(_audioFile);
-            _outputDevice = new WaveOutEvent();
-            _outputDevice.Init(_loop);
+            _outputDevice = new WasapiOut();
+            _outputDevice.Initialize(_audioFile);
             _outputDevice.Volume = 0;
             _outputDevice.Play();
 
@@ -93,7 +95,7 @@ namespace Taimi.UndaDaSea_BlishHUD
             else if (Zloc <= 0)
             {
                 //Dey unda the sea, LET THE BLOWFISH BLOW 
-                volume = Map(Zloc, -30, 0, _masterVolume.Value, 0.01f);
+                volume = Map(Zloc, -30, 0, (_masterVolume.Value / 100), 0.01f);
             }
             else
             {
@@ -121,9 +123,15 @@ namespace Taimi.UndaDaSea_BlishHUD
         /// <inheritdoc />
         protected override void Unload()
         {
-            // Unload here
+            // Unload
+            _outputDevice.Stop();
+            _outputDevice.Dispose();
+            _outputDevice = null;
+            _audioFile.Dispose();
+            _audioFile = null;
 
             // All static members must be manually unset
+            ModuleInstance = null;
         }
 
     }
