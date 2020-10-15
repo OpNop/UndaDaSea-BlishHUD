@@ -15,9 +15,7 @@ namespace Taimi.UndaDaSea_BlishHUD
     public class Module : Blish_HUD.Modules.Module
     {
 
-        private static readonly Logger Logger = Logger.GetLogger(typeof(Module));
-
-        internal static Module ModuleInstance;
+        private static readonly Logger Logger = Logger.GetLogger<Module>();
 
         //Audio Player stuff
         private StreamMediaFoundationReader _audioFile;
@@ -35,7 +33,7 @@ namespace Taimi.UndaDaSea_BlishHUD
         #endregion
 
         [ImportingConstructor]
-        public Module([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
+        public Module([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { }
 
         protected override void DefineSettings(SettingCollection settings)
         {
@@ -110,22 +108,6 @@ namespace Taimi.UndaDaSea_BlishHUD
             _outputDevice.Volume = volume;
         }
 
-        /// <inheritdoc />
-        protected override void Unload()
-        {
-            // Unload
-            _outputDevice.Stop();
-            _outputDevice.Dispose();
-            _outputDevice = null;
-            _audioFile.Dispose();
-            _audioFile = null;
-            _loop.Dispose();
-            _loop = null;
-
-            // All static members must be manually unset
-            ModuleInstance = null;
-        }
-
         private static float Map(float value, float fromLow, float fromHigh, float toLow, float toHigh)
         {
             return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow;
@@ -134,6 +116,14 @@ namespace Taimi.UndaDaSea_BlishHUD
         public static float Clamp(float value, float min, float max)
         {
             return (value < min) ? min : (value > max) ? max : value;
+        }
+
+        /// <inheritdoc />
+        protected override void Unload()
+        {
+            // Unload here
+
+            // All static members must be manually unset
         }
 
     }
