@@ -23,7 +23,7 @@ namespace Taimi.UndaDaSea_BlishHUD
         private IWaveSource _audioFile;
         private WasapiOut _outputDevice;
 
-        //Settings (maybe one day)
+        //Settings
         private SettingEntry<float> _masterVolume;
 
         internal static Module ModuleInstance;
