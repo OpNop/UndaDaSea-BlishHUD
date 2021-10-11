@@ -6,9 +6,7 @@ using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Microsoft.Xna.Framework;
-using CSCore;
-using CSCore.SoundOut;
-using CSCore.Codecs.MP3;
+using NAudio.Wave;
 
 namespace Taimi.UndaDaSea_BlishHUD
 {
@@ -19,14 +17,10 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         private static readonly Logger Logger = Logger.GetLogger<Module>();
 
-        //Audio Player stuff
-        private IWaveSource _audioFile;
-        private WasapiOut _outputDevice;
+        private WaveOut _soundClip;
 
         //Settings
         private SettingEntry<float> _masterVolume;
-
-        internal static Module ModuleInstance;
 
         #region Service Managers
         internal SettingsManager SettingsManager => this.ModuleParameters.SettingsManager;
@@ -40,7 +34,7 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            _masterVolume = settings.DefineSetting("MasterVolume.", 50.0f, "Master Volume", "Is Sebastian a little to loud for you? Well you can attempt to have him sing a little less enthusiastically.");
+            _masterVolume = settings.DefineSetting("MasterVolume.", 50.0f, () => "Master Volume", () => "Is Sebastian a little to loud for you? Well you can attempt to have him sing a little less enthusiastically.");
         }
 
         protected override void Initialize()
@@ -50,21 +44,20 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         protected override async Task LoadAsync()
         {
-            //Load Loop
-            _audioFile = new Mp3MediafoundationDecoder(ContentsManager.GetFileStream("uts_loop4.mp3")).Loop();
+            var stream = ContentsManager.GetFileStream("uts_loop4.mp3");
+            var reader = new LoopingAudioStream(new Mp3FileReader(stream));
+            _soundClip = new WaveOut();
+            _soundClip.Init(reader);
         }
 
         protected override void OnModuleLoaded(EventArgs e)
         {
             //Start playing the music at 0 volume
-            _outputDevice = new WasapiOut();
-            _outputDevice.Initialize(_audioFile);
-            _outputDevice.Volume = 0;
-            _outputDevice.Play();
+            _soundClip.Volume = 0;
 
             //Catch when the games is closed and started to bring on the music
-            GameService.GameIntegration.Gw2Closed += GameIntegration_Gw2Closed;
-            GameService.GameIntegration.Gw2Started += GameIntegration_Gw2Started;
+            GameService.GameIntegration.Gw2Instance.Gw2Closed  += GameIntegration_Gw2Closed;
+            GameService.GameIntegration.Gw2Instance.Gw2Started += GameIntegration_Gw2Started;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -72,33 +65,36 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         private void GameIntegration_Gw2Started(object sender, EventArgs e)
         {
-            _outputDevice.Play();
+            _soundClip.Play();
         }
 
         private void GameIntegration_Gw2Closed(object sender, EventArgs e)
         {
-            _outputDevice.Stop();
+            _soundClip.Stop();
         }
 
-        protected override void Update(GameTime gameTime)
+        private double _timeSinceUpdate;
+
+        private void UpdateVolume(GameTime gameTime)
         {
+            // Expensive to set the volume
+            if (_timeSinceUpdate < 300)
+            {
+                _timeSinceUpdate += gameTime.ElapsedGameTime.TotalMilliseconds;
+                return;
+            }
+
+            _timeSinceUpdate = 0;
+
             //REMEMBER: Blish crossed his wires, Z=Y and Y=Z
             //For BlishOS use Zloc
             float Zloc = GameService.Gw2Mumble.PlayerCharacter.Position.Z;
             float volume;
 
-            if (GameService.GameIntegration.IsInGame == false)
-            {
-                //If UITick is not moving might be loading or some other "state"
-                volume = 0;
-            }
-            else if (Zloc <= 0)
-            {
+            if (Zloc <= 0) {
                 //Dey unda the sea, LET THE BLOWFISH BLOW 
                 volume = Map(Zloc, -30, 0, (_masterVolume.Value / 100), 0.01f);
-            }
-            else
-            {
+            } else {
                 //Getting "near" the sea, give 'em a sample of undersea life
                 volume = Map(Zloc, 0, 3, 0.01f, 0f);
             }
@@ -107,7 +103,29 @@ namespace Taimi.UndaDaSea_BlishHUD
             volume = Clamp(volume, 0, 1);
 
             //Set the volume
-            _outputDevice.Volume = volume;
+            _soundClip.Volume = volume;
+        }
+
+        protected override void Update(GameTime gameTime)
+        {
+            if (GameService.GameIntegration.Gw2Instance.IsInGame == false)
+            {
+                //If UITick is not moving might be loading or some other "state" so we pause
+                if (_soundClip.PlaybackState == PlaybackState.Playing)
+                {
+                    _soundClip.Pause();
+                }
+                return;
+            }
+
+            UpdateVolume(gameTime);
+            
+            if (_soundClip.PlaybackState != PlaybackState.Playing)
+            {
+                // We reset volume back to 0 to avoid the audio playing for a second when teleporting after being in the water
+                _soundClip.Volume = 0f;
+                _soundClip.Play();
+            }
         }
 
         private static float Map(float value, float fromLow, float fromHigh, float toLow, float toHigh)
@@ -124,14 +142,8 @@ namespace Taimi.UndaDaSea_BlishHUD
         protected override void Unload()
         {
             // Unload
-            _outputDevice.Stop();
-            _outputDevice.Dispose();
-            _outputDevice = null;
-            _audioFile.Dispose();
-            _audioFile = null;
-
-            // All static members must be manually unset
-            ModuleInstance = null;
+            _soundClip.Stop();
+            _soundClip.Dispose();
         }
 
     }
