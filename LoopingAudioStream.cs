@@ -22,7 +22,7 @@ namespace Taimi.UndaDaSea_BlishHUD {
         public override int Read(byte[] buffer, int offset, int count)
         {
             int totalBytesRead = 0;
-
+            
             while (totalBytesRead < count)
             {
                 int bytesRead = _sourceStream.Read(buffer, offset + totalBytesRead, count - totalBytesRead);

@@ -1,12 +1,16 @@
 ﻿using System;
 using System.ComponentModel.Composition;
+using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using Blish_HUD;
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Microsoft.Xna.Framework;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Taimi.UndaDaSea_BlishHUD
 {
@@ -17,7 +21,7 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         private static readonly Logger Logger = Logger.GetLogger<Module>();
 
-        private WaveOut _soundClip;
+        private IWavePlayer _soundClip;
 
         //Settings
         private SettingEntry<float> _masterVolume;
@@ -44,16 +48,23 @@ namespace Taimi.UndaDaSea_BlishHUD
 
         protected override async Task LoadAsync()
         {
-            var stream = ContentsManager.GetFileStream("uts_loop4.mp3");
-            var reader = new LoopingAudioStream(new Mp3FileReader(stream));
-            _soundClip = new WaveOut();
-            _soundClip.Init(reader);
+            
         }
+
+        VolumeSampleProvider _volumeSampler;
 
         protected override void OnModuleLoaded(EventArgs e)
         {
+            var stream = ContentsManager.GetFileStream("uts_loop4.mp3");
+            var reader = new LoopingAudioStream(new Mp3FileReader(stream));
+
+            _volumeSampler = new VolumeSampleProvider(reader.ToSampleProvider());
+
+            _soundClip = new WaveOutEvent();
+            _soundClip.Init(_volumeSampler);
+
             //Start playing the music at 0 volume
-            _soundClip.Volume = 0;
+            _volumeSampler.Volume = 0f;
 
             //Catch when the games is closed and started to bring on the music
             GameService.GameIntegration.Gw2Instance.Gw2Closed  += GameIntegration_Gw2Closed;
@@ -100,10 +111,10 @@ namespace Taimi.UndaDaSea_BlishHUD
             }
 
             //Lets not get crazy here, keep it between 0 and 1
-            volume = Clamp(volume, 0, 1);
+            volume = Clamp(volume, 0f, 1f);
 
             //Set the volume
-            _soundClip.Volume = volume;
+            _volumeSampler.Volume = volume;
         }
 
         protected override void Update(GameTime gameTime)
@@ -123,7 +134,7 @@ namespace Taimi.UndaDaSea_BlishHUD
             if (_soundClip.PlaybackState != PlaybackState.Playing)
             {
                 // We reset volume back to 0 to avoid the audio playing for a second when teleporting after being in the water
-                _soundClip.Volume = 0f;
+                _volumeSampler.Volume = 0f;
                 _soundClip.Play();
             }
         }
