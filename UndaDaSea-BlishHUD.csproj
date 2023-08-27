@@ -66,6 +66,7 @@
   <ItemGroup>
     <Compile Include="LoopingAudioStream.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SkyLake.cs" />
     <Compile Include="UndaDaSea_BlishHUD.cs" />
   </ItemGroup>
   <ItemGroup>
