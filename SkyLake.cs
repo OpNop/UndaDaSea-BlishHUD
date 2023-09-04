@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace Taimi.UndaDaSea_BlishHUD
@@ -12,14 +14,27 @@ namespace Taimi.UndaDaSea_BlishHUD
         private readonly Vector3 center;
         private readonly float radius;
         private float _distance;
+        private readonly string _name;
+        private readonly int _map;
 
-        public SkyLake(float waterSurface, float waterBottom, List<Vector3> bounds)
+        public SkyLake(float waterSurface, float waterBottom, List<Vector3> bounds, int map)
         {
             _waterSurface = waterSurface;
             _waterBottom = waterBottom;
+            _map = map;
             this.bounds = bounds;
             center = GetCenter();
             radius = GetRadius();
+        }
+
+        public string Name
+        { 
+            get { return _name; }
+        }
+
+        public int Map
+        {
+            get { return _map; }
         }
 
         public float WaterSurface
@@ -27,9 +42,20 @@ namespace Taimi.UndaDaSea_BlishHUD
             get { return _waterSurface; }
         }
 
+        public float WaterBottom
+        {
+            get { return _waterBottom; } 
+        }
+
+        [JsonIgnore]
         public float Distance
         {
             get { return _distance; }
+        }
+
+        public List<Vector3> Bounds
+        {
+            get { return bounds; }
         }
 
         //so we don't have to perform the more expensive calcs all the time
@@ -101,6 +127,54 @@ namespace Taimi.UndaDaSea_BlishHUD
             }
 
             return radius;
+        }
+    }
+
+    public class Vector3Converter : JsonConverter<Vector3>
+    {
+        public override Vector3 ReadJson(JsonReader reader, Type objectType, Vector3 existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            Vector3 result = default(Vector3);
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonToken.PropertyName)
+                {
+                    switch (reader.Value.ToString())
+                    {
+                        case "X":
+                            result.X = (float)reader.ReadAsDouble().Value;
+                            break;
+                        case "Y":
+                            result.Y = (float)reader.ReadAsDouble().Value;
+                            break;
+                        case "Z":
+                            result.Z = (float)reader.ReadAsDouble().Value;
+                            break;
+                    }
+                }
+                else if (reader.TokenType == JsonToken.EndObject)
+                    break;
+            }
+
+            return result;
+        }
+
+        public override void WriteJson(JsonWriter writer, Vector3 value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+            if (serializer.TypeNameHandling != TypeNameHandling.None)
+            {
+                writer.WritePropertyName("$type");
+                writer.WriteValue(string.Format("{0}, {1}", value.GetType().ToString(), value.GetType().Assembly.GetName().Name));
+            }
+            writer.WritePropertyName("X");
+            writer.WriteValue(value.X);
+            writer.WritePropertyName("Y");
+            writer.WriteValue(value.Y);
+            writer.WritePropertyName("Z");
+            writer.WriteValue(value.Z);
+            writer.WriteEndObject();
         }
     }
 }

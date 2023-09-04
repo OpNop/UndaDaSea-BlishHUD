@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Blish_HUD;
@@ -10,6 +11,7 @@ using Blish_HUD.Settings;
 using Microsoft.Xna.Framework;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using Newtonsoft.Json;
 
 namespace Taimi.UndaDaSea_BlishHUD
 {
@@ -73,7 +75,7 @@ namespace Taimi.UndaDaSea_BlishHUD
             GameService.GameIntegration.Gw2Instance.Gw2Started += GameIntegration_Gw2Started;
 
             //Load SkyLakes
-            LoadSkyLakes();
+            _skyLakes = LoadSkyLakesFromJson();
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -168,7 +170,6 @@ namespace Taimi.UndaDaSea_BlishHUD
             return (value < min) ? min : (value > max) ? max : value;
         }
 
-        /// <inheritdoc />
         protected override void Unload()
         {
             // Unload
@@ -177,81 +178,15 @@ namespace Taimi.UndaDaSea_BlishHUD
             _skyLakes?.Clear();
         }
 
-        //Lame Sky Lake Data Loader
-        private void LoadSkyLakes()
+        public List<SkyLake> LoadSkyLakesFromJson()
         {
-            _skyLakes = new List<SkyLake>
+            JsonSerializer serializer = new JsonSerializer();
+            serializer.Converters.Add(new Vector3Converter());
+            using (StreamReader stream = new StreamReader(ContentsManager.GetFileStream("SkyLakes.json")))
+            using (JsonReader reader = new JsonTextReader(stream))
             {
-                //Jade Mech Habitation Zone 03
-                new SkyLake(396, 300, new List<Vector3> {
-                    new Vector3(77,   -53, 402),
-                    new Vector3(77,   115, 402),
-                    new Vector3(-155, 115, 402),
-                    new Vector3(-155, -53, 402),
-                }),
-
-                //Stargaze Ridge
-                new SkyLake(260, 200, new List<Vector3> {
-                    new Vector3(1038, 263, 260),
-                    new Vector3(1111, 252, 260),
-                    new Vector3(1100, 35,  260),
-                    new Vector3(1012, 85,  260),
-                }),
-
-                //Primal Maguuma (Low lake)
-                new SkyLake(353, 300, new List<Vector3>
-                {
-                    new Vector3(-83, 584, 353),
-                    new Vector3(-81, 626, 353),
-                    new Vector3(-24, 634, 353),
-                    new Vector3(52, 594, 353),
-                    new Vector3(85, 485, 353),
-                    new Vector3(195, 467, 353),
-                    new Vector3(208, 423, 353),
-                    new Vector3(157, 386, 353),
-                    new Vector3(152, 317, 353),
-                    new Vector3(56, 310, 353),
-                    new Vector3(18, 376, 353),
-                    new Vector3(22, 416, 353),
-                    new Vector3(-20, 438, 353),
-                    new Vector3(-29, 538, 353),
-                }),
-
-                //Primal Maguuma (mid lake)
-                new SkyLake(435, 400, new List<Vector3> {
-                    new Vector3(8.762414f, 365.2565f, 435),
-                    new Vector3(2.563565f, 408.4081f, 435),
-                    new Vector3(-22.61929f, 438.4842f, 435),
-                    new Vector3(-45.60424f, 500.1057f, 435),
-                    new Vector3(-73.58975f, 559.9127f, 435),
-                    new Vector3(-126.0663f, 559.3304f, 435),
-                    new Vector3(-125.1464f, 467.7312f, 435),
-                    new Vector3(-80.47857f, 398.7868f, 435),
-                    new Vector3(-54.03018f, 361.1153f, 435),
-                    new Vector3(-6.560186f, 349.9526f, 435),
-                }),
-
-                //Primal Maguuma (high lake)
-                new SkyLake(484, 430, new List<Vector3> {
-                    new Vector3(-121.9899f, 437.0892f, 484),
-                    new Vector3(-157.1637f, 462.3725f, 484),
-                    new Vector3(-167.7869f, 471.4856f, 484),
-                    new Vector3(-170.0892f, 497.2692f, 484),
-                    new Vector3(-243.7502f, 511.4792f, 484),
-                    new Vector3(-243.0668f, 466.6464f, 484),
-                    new Vector3(-221.771f, 439.689f, 484),
-                }),
-
-                //Primal Maguuma (top pond)
-                new SkyLake(494, 483, new List<Vector3> {
-                    new Vector3(-319.1087f, 516.947f, 494),
-                    new Vector3(-248.7634f, 511.2591f, 494),
-                    new Vector3(-250.345f, 480.397f, 494),
-                    new Vector3(-313.2242f, 487.2502f, 494),
-                }),
-            };
+                return serializer.Deserialize<List<SkyLake>>(reader);
+            }
         }
-
     }
-
 }
