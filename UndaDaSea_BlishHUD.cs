@@ -114,7 +114,7 @@ namespace Taimi.UndaDaSea_BlishHUD
             if (SkyLakeMaps.Contains(CurrentMap))
             {
                 //Check if they are near/in a Sky Lake
-                var NearbyLake = _skyLakes.Where(lake => lake.IsNearby(playerPosition)).OrderBy(lake => lake.Distance).FirstOrDefault();
+                var NearbyLake = _skyLakes.Where(lake => lake.Map == CurrentMap).Where(lake => lake.IsNearby(playerPosition)).OrderBy(lake => lake.Distance).FirstOrDefault();
                 waterOffset = (NearbyLake != null && NearbyLake.IsInWater(playerPosition)) ? NearbyLake.WaterSurface : 0;
             } 
             else
