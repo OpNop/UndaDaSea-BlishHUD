@@ -1,6 +1,6 @@
 {
   "name": "Unda Da Sea",
-  "version": "2.0.4-Beta",
+  "version": "2.0.4",
   "namespace": "Taimi.UndaDaSea_BlishHUD",
   "package": "UndaDaSea-BlishHUD.dll",
   "manifest_version": 1,
